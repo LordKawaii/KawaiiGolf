@@ -29,47 +29,50 @@ public class PlayerContoller : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 
-        if (playerStates.isFirstFrameOfTurn)
+        if (playerStates.thisPlayersTurn && !playerStates.isTakingShot)
         {
-            PlayerSetup();
-            playerStates.isFirstFrameOfTurn = false;
-        }
 
-        if (gameStates.playerTurn == playerNum && !playerStates.takingShot)
-        {
+            if (playerStates.isFirstFrameOfTurn)
+            {
+                PlayerSetup();
+                playerStates.isFirstFrameOfTurn = false;
+            }
+
             Debug.DrawLine(transform.position, transform.forward, Color.green);
             //UpdateTrajectory(transform.position, transform.forward * speedMultiplyer * powerSlider.maxValue, Vector3.down);
             InputManager();
         }
 
-        if (playerStates.settingPower)
+        if (playerStates.isSettingPower)
             SetPower();
-                
 	}
+
 
     void FixedUpdate()
     {
-        if (playerStates.takingShot)
+        if (playerStates.thisPlayersTurn && playerStates.isTakingShot)
         {
             if (CheckIfStoped())
             {
                 rb.isKinematic = true;
-                playerStates.takingShot = false;
+                playerStates.isTakingShot = false;
                 playerStates.isStoped = true;
                 particleSys.Stop();
                 transform.rotation = Quaternion.identity;
+                playerStates.isFirstFrameOfTurn = true;
                 gameController.EndTurn();
             }
 
         }
-
     }
+
 
     void PlayerSetup()
     {
         powerSlider.value = powerSlider.minValue;
     }
 
+    
     void InputManager()
     {
         if (Input.GetAxis("Horizontal") != 0)
@@ -79,23 +82,24 @@ public class PlayerContoller : MonoBehaviour {
         if (Input.GetButtonDown("Fire1"))
         {
 
-            if (playerStates.settingPower)
+            if (playerStates.isSettingPower)
             {
                 transform.localScale = Vector3.one;
                 particleSys.Play();
                 rb.isKinematic = false;
                 AddForce(powerSlider.value);
-                playerStates.settingPower = false;
-                playerStates.takingShot = true;
+                playerStates.isSettingPower = false;
+                playerStates.isTakingShot = true;
             }
-            
-            if (!playerStates.takingShot)
+
+            if (!playerStates.isTakingShot)
             {
                 //rb.isKinematic = true;
-                playerStates.settingPower = true;
+                playerStates.isSettingPower = true;
             }
         }
     }
+
 
     void SetPower()
     {
@@ -130,15 +134,20 @@ public class PlayerContoller : MonoBehaviour {
     }
 
 
+    public bool GetPlayerStates()
+    {
+         return playerStates.thisPlayersTurn;
+    }
+
     /*
     void UpdateTrajectory(Vector3 startPos, Vector3 direction, float speed, float timePerSegmentInSeconds, float maxTravelDistance)
     {
-        var positions = new List<Vector3>();
-        var lastPos = startPos;
+        List<Vector3> positions = new List<Vector3>();
+        Vector3 lastPos = startPos;
 
         positions.Add(startPos);
 
-        var traveledDistance = 0.0f;
+        float traveledDistance = 0.0f;
         while (traveledDistance < maxTravelDistance)
         {
             traveledDistance += speed * timePerSegmentInSeconds;
@@ -147,7 +156,7 @@ public class PlayerContoller : MonoBehaviour {
             {
                 break;
             }
-            var lastPos = currentPos;
+            Vector3 lastPos = currentPos;
             currentPos = positions[positions.Count - 1];
             direction = currentPos - lastPos;
             direction.Normalize();
@@ -158,7 +167,7 @@ public class PlayerContoller : MonoBehaviour {
 
     bool TravelTrajectorySegment(Vector3 startPos, Vector3 direction, float speed, float timePerSegmentInSeconds, List<Vector3> positions)
     {
-        var newPos = startPos + direction * speed * timePerSegmentInSeconds + Physics.gravity * timePerSegmentInSeconds;
+        Vector3 newPos = startPos + direction * speed * timePerSegmentInSeconds + Physics.gravity * timePerSegmentInSeconds;
 
         RaycastHit hitInfo;
         var hasHitSomething = Physics.Linecast(startPos, newPos, out hitInfo);
@@ -174,7 +183,7 @@ public class PlayerContoller : MonoBehaviour {
     void BuildTrajectoryLine(List<Vector3> positions)
     {
         lineRenderer.SetVertexCount(positions.Count);
-        for (var i = 0; i < positions.Count; ++i)
+        for (int i = 0; i < positions.Count; ++i)
         {
             lineRenderer.SetPosition(i, positions[i]);
         }
